@@ -1,0 +1,8 @@
+2025-07-29 23:11:19,654 - INFO - Dataset loaded successfully from /app/output/sample_dataset.csv
+2025-07-29 23:12:00,912 - ERROR - Evaluation failed: To be able to use bertscore, you need to install the following dependency: bert_score.
+Please install it using 'pip install bert_score' for instance.
+2025-07-29 23:15:44,120 - INFO - Dataset loaded successfully from /app/output/sample_dataset.csv
+2025-07-29 23:16:29,324 - ERROR - Evaluation failed: Couldn't find a module script at /app/bertscore/bertscore.py. Module 'bertscore' doesn't exist on the Hugging Face Hub either.
+2025-07-29 23:22:57,731 - INFO - Dataset loaded successfully from /app/output/sample_dataset.csv
+2025-07-29 23:25:54,496 - INFO - Evaluation completed for 2 prompts
+2025-07-29 23:25:54,599 - INFO - Results saved to /app/output/evaluation_results.json

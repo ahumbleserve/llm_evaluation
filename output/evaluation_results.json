@@ -1,0 +1,16 @@
+[
+  {
+    "prompt":"What is the capital of France?",
+    "generated":"POSITIVE",
+    "reference":"The capital is Paris.",
+    "bertscore_f1":0.7634884715,
+    "success":false
+  },
+  {
+    "prompt":"What is 2+2?",
+    "generated":"NEGATIVE",
+    "reference":"The answer is 4.",
+    "bertscore_f1":0.8004161119,
+    "success":true
+  }
+]
