@@ -1,0 +1,27 @@
+name: LLM Evaluation CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  evaluate-llm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt --retries 10
+      - name: Run evaluation
+        run: python llm_evaluation_pipeline.py
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: evaluation-results
+          path: evaluation_results.json
