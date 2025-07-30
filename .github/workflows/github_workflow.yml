@@ -18,10 +18,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt --retries 10
+      - name: Create output directory
+        run: mkdir -p output
       - name: Run evaluation
         run: python llm_evaluation_pipeline.py
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: evaluation-results
-          path: evaluation_results.json
+          path: output/evaluation_results.json
