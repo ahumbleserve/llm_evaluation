@@ -4,10 +4,15 @@ from transformers import pipeline
 from bert_score import score
 from datetime import datetime
 import json
+import os
+
+# Criar diretório de saída, se não existir
+output_dir = "./output"
+os.makedirs(output_dir, exist_ok=True)
 
 # Configuração de logging para capturar sinais de sucesso/falha e casos de borda
 logging.basicConfig(
-    filename='/app/output/llm_evaluation.log',
+    filename=os.path.join(output_dir, 'llm_evaluation.log'),
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -58,7 +63,7 @@ def evaluate_llm(prompts, reference_answers, model_name="distilbert-base-uncased
         logging.error(f"Evaluation failed: {str(e)}")
         raise
 
-def save_results(results_df, output_path="/app/output/evaluation_results.json"):
+def save_results(results_df, output_path=os.path.join(output_dir, 'evaluation_results.json')):
     """Salva os resultados da avaliação em um arquivo JSON."""
     try:
         results_df.to_json(output_path, orient="records", indent=2)
@@ -75,10 +80,11 @@ def main():
     })
     
     # Salva dataset temporário para simular carregamento
-    dataset.to_csv("/app/output/sample_dataset.csv", index=False)
+    dataset_path = os.path.join(output_dir, 'sample_dataset.csv')
+    dataset.to_csv(dataset_path, index=False)
     
     # Executa pipeline
-    df = load_dataset("/app/output/sample_dataset.csv")
+    df = load_dataset(dataset_path)
     results = evaluate_llm(df["prompt"], df["reference"])
     save_results(results)
 
