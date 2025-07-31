@@ -3,6 +3,7 @@ import pandas as pd
 from transformers import pipeline
 from bert_score import score
 from datetime import datetime
+from evaluate import load
 import json
 import os
 
@@ -27,32 +28,40 @@ def load_dataset(file_path):
         logging.error(f"Failed to load dataset: {str(e)}")
         raise
 
-def evaluate_llm(prompts, reference_answers, model_name="distilbert-base-uncased-finetuned-sst-2-english"):
-    """Avalia um LLM com uma rubrica de pontuação (BERTScore) e captura logs."""
+def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
+    """Avalia um LLM com uma rubrica de pontuação (BERTScore e BLEU) e captura logs."""
     try:
         # Inicializa o modelo
-        nlp = pipeline("text-classification", model=model_name)
+        nlp = pipeline("text2text-generation", model=model_name)
+        # Inicializa a métrica BLEU
+        bleu = load("bleu")
         
         results = []
         for prompt, reference in zip(prompts, reference_answers):
             # Gera resposta do LLM
-            response = nlp(prompt)[0]
-            generated_text = response['label']
+            response = nlp(prompt, max_length=50, num_beams=5)[0]
+            generated_text = response['generated_text']
             
             # Calcula métrica de coerência (BERTScore)
             P, R, F1 = score([generated_text], [reference], lang="en", verbose=False)
+            
+            # Calcula métrica BLEU
+            bleu_score = bleu.compute(predictions=[generated_text], references=[[reference]])
             
             result = {
                 "prompt": prompt,
                 "generated": generated_text,
                 "reference": reference,
                 "bertscore_f1": F1.tolist()[0],
-                "success": F1.tolist()[0] > 0.8  # Threshold para sucesso
+                "bleu_score": bleu_score["bleu"],
+                "success": F1.tolist()[0] > 0.8  # Threshold para sucesso (baseado em BERTScore)
             }
             
             # Log de casos de borda
             if F1.tolist()[0] < 0.5:
                 logging.warning(f"Edge case detected: Low BERTScore {F1.tolist()[0]} for prompt: {prompt}")
+            if bleu_score["bleu"] < 0.1:
+                logging.warning(f"Edge case detected: Low BLEU score {bleu_score['bleu']} for prompt: {prompt}")
             
             results.append(result)
         
@@ -62,7 +71,7 @@ def evaluate_llm(prompts, reference_answers, model_name="distilbert-base-uncased
     except Exception as e:
         logging.error(f"Evaluation failed: {str(e)}")
         raise
-
+        
 def save_results(results_df, output_path=os.path.join(output_dir, 'evaluation_results.json')):
     """Salva os resultados da avaliação em um arquivo JSON."""
     try:
