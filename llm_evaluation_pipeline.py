@@ -2,7 +2,6 @@ import logging
 import pandas as pd
 from transformers import pipeline
 from bert_score import score
-from datetime import datetime
 from evaluate import load
 import json
 import os
@@ -29,12 +28,12 @@ def load_dataset(file_path):
         raise
 
 def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
-    """Avalia um LLM com uma rubrica de pontuação (BERTScore e BLEU) e captura logs."""
+    """Avalia um LLM com uma rubrica de pontuação (BERTScore e ROUGE) e captura logs."""
     try:
         # Inicializa o modelo
         nlp = pipeline("text2text-generation", model=model_name)
-        # Inicializa a métrica BLEU
-        bleu = load("bleu")
+        # Inicializa a métrica ROUGE
+        rouge = load("rouge")
         
         results = []
         for prompt, reference in zip(prompts, reference_answers):
@@ -45,23 +44,23 @@ def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
             # Calcula métrica de coerência (BERTScore)
             P, R, F1 = score([generated_text], [reference], lang="en", verbose=False)
             
-            # Calcula métrica BLEU
-            bleu_score = bleu.compute(predictions=[generated_text], references=[[reference]])
+            # Calcula métrica ROUGE
+            rouge_score = rouge.compute(predictions=[generated_text], references=[reference])
             
             result = {
                 "prompt": prompt,
                 "generated": generated_text,
                 "reference": reference,
                 "bertscore_f1": F1.tolist()[0],
-                "bleu_score": bleu_score["bleu"],
+                "rouge_score": rouge_score["rougeL"],
                 "success": F1.tolist()[0] > 0.8  # Threshold para sucesso (baseado em BERTScore)
             }
             
             # Log de casos de borda
             if F1.tolist()[0] < 0.5:
                 logging.warning(f"Edge case detected: Low BERTScore {F1.tolist()[0]} for prompt: {prompt}")
-            if bleu_score["bleu"] < 0.1:
-                logging.warning(f"Edge case detected: Low BLEU score {bleu_score['bleu']} for prompt: {prompt}")
+            if rouge_score["rougeL"] < 0.1:
+                logging.warning(f"Edge case detected: Low ROUGE score {rouge_score['rougeL']} for prompt: {prompt}")
             
             results.append(result)
         
@@ -71,7 +70,7 @@ def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
     except Exception as e:
         logging.error(f"Evaluation failed: {str(e)}")
         raise
-        
+
 def save_results(results_df, output_path=os.path.join(output_dir, 'evaluation_results.json')):
     """Salva os resultados da avaliação em um arquivo JSON."""
     try:
@@ -91,12 +90,10 @@ def main():
     # Salva dataset temporário para simular carregamento
     dataset_path = os.path.join(output_dir, 'sample_dataset.csv')
     dataset.to_csv(dataset_path, index=False)
-    dataset_path = os.path.join(output_dir, 'custom_dataset.csv')
     
     # Executa pipeline
     df = load_dataset(dataset_path)
-    #results = evaluate_llm(df["prompt"], df["reference"])
-    results = evaluate_llm(df["prompt"], df["reference"], model_name="bert-base-uncased")
+    results = evaluate_llm(df["prompt"], df["reference"])
     save_results(results)
 
 if __name__ == "__main__":
