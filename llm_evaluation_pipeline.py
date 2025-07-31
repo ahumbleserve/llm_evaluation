@@ -82,10 +82,12 @@ def main():
     # Salva dataset temporário para simular carregamento
     dataset_path = os.path.join(output_dir, 'sample_dataset.csv')
     dataset.to_csv(dataset_path, index=False)
+    dataset_path = os.path.join(output_dir, 'custom_dataset.csv')
     
     # Executa pipeline
     df = load_dataset(dataset_path)
-    results = evaluate_llm(df["prompt"], df["reference"])
+    #results = evaluate_llm(df["prompt"], df["reference"])
+    results = evaluate_llm(df["prompt"], df["reference"], model_name="bert-base-uncased")
     save_results(results)
 
 if __name__ == "__main__":
