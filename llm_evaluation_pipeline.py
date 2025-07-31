@@ -2,15 +2,14 @@ import logging
 import pandas as pd
 from transformers import pipeline
 from bert_score import score
-from evaluate import load
 import json
 import os
 
-# Criar diretório de saída, se não existir
+# Create output directory if it doesn't exist
 output_dir = "./output"
 os.makedirs(output_dir, exist_ok=True)
 
-# Configuração de logging para capturar sinais de sucesso/falha e casos de borda
+# Configure logging to capture success/failure signals and edge cases
 logging.basicConfig(
     filename=os.path.join(output_dir, 'llm_evaluation.log'),
     level=logging.INFO,
@@ -18,7 +17,7 @@ logging.basicConfig(
 )
 
 def load_dataset(file_path):
-    """Carrega um dataset CSV com prompts e respostas de referência."""
+    """Load a CSV dataset with prompts and reference answers."""
     try:
         df = pd.read_csv(file_path)
         logging.info(f"Dataset loaded successfully from {file_path}")
@@ -28,39 +27,31 @@ def load_dataset(file_path):
         raise
 
 def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
-    """Avalia um LLM com uma rubrica de pontuação (BERTScore e ROUGE) e captura logs."""
+    """Evaluate an LLM with a scoring rubric (BERTScore) and capture logs."""
     try:
-        # Inicializa o modelo
+        # Initialize the model
         nlp = pipeline("text2text-generation", model=model_name)
-        # Inicializa a métrica ROUGE
-        rouge = load("rouge")
         
         results = []
         for prompt, reference in zip(prompts, reference_answers):
-            # Gera resposta do LLM
+            # Generate response from LLM
             response = nlp(prompt, max_length=50, num_beams=5)[0]
             generated_text = response['generated_text']
             
-            # Calcula métrica de coerência (BERTScore)
+            # Calculate coherence metric (BERTScore)
             P, R, F1 = score([generated_text], [reference], lang="en", verbose=False)
-            
-            # Calcula métrica ROUGE
-            rouge_score = rouge.compute(predictions=[generated_text], references=[reference])
             
             result = {
                 "prompt": prompt,
                 "generated": generated_text,
                 "reference": reference,
                 "bertscore_f1": F1.tolist()[0],
-                "rouge_score": rouge_score["rougeL"],
-                "success": F1.tolist()[0] > 0.8  # Threshold para sucesso (baseado em BERTScore)
+                "success": F1.tolist()[0] > 0.8  # Threshold for success
             }
             
-            # Log de casos de borda
+            # Log edge cases
             if F1.tolist()[0] < 0.5:
                 logging.warning(f"Edge case detected: Low BERTScore {F1.tolist()[0]} for prompt: {prompt}")
-            if rouge_score["rougeL"] < 0.1:
-                logging.warning(f"Edge case detected: Low ROUGE score {rouge_score['rougeL']} for prompt: {prompt}")
             
             results.append(result)
         
@@ -72,7 +63,7 @@ def evaluate_llm(prompts, reference_answers, model_name="t5-small"):
         raise
 
 def save_results(results_df, output_path=os.path.join(output_dir, 'evaluation_results.json')):
-    """Salva os resultados da avaliação em um arquivo JSON."""
+    """Save evaluation results to a JSON file."""
     try:
         results_df.to_json(output_path, orient="records", indent=2)
         logging.info(f"Results saved to {output_path}")
@@ -81,17 +72,17 @@ def save_results(results_df, output_path=os.path.join(output_dir, 'evaluation_re
         raise
 
 def main():
-    # Exemplo de dataset
+    # Example dataset
     dataset = pd.DataFrame({
         "prompt": ["What is the capital of France?", "What is 2+2?"],
         "reference": ["The capital is Paris.", "The answer is 4."]
     })
     
-    # Salva dataset temporário para simular carregamento
+    # Save temporary dataset to simulate loading
     dataset_path = os.path.join(output_dir, 'sample_dataset.csv')
     dataset.to_csv(dataset_path, index=False)
     
-    # Executa pipeline
+    # Run pipeline
     df = load_dataset(dataset_path)
     results = evaluate_llm(df["prompt"], df["reference"])
     save_results(results)
